@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react'
 import ErrorBox from '../ErrorBox'
 import { supabase } from '../../lib/supabase'
 import { inputClass, primaryButton } from '../../lib/ui'
+import { minDateFor, todayISO } from '../../lib/format'
 import { AREAS, GOAL_STATUSES, type Goal, type GoalStatus, type LifeArea } from '../../lib/planning'
 
 type Props = {
@@ -14,14 +15,16 @@ export default function GoalForm({ goal, onDone }: Props) {
   const [title, setTitle] = useState(goal?.title ?? '')
   const [description, setDescription] = useState(goal?.description ?? '')
   const [area, setArea] = useState<LifeArea>(goal?.area ?? 'personal')
-  const [targetDate, setTargetDate] = useState(goal?.target_date ?? '')
+  const [targetDate, setTargetDate] = useState(goal ? (goal.target_date ?? '') : todayISO())
   const [status, setStatus] = useState<GoalStatus>(goal?.status ?? 'activa')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const minTarget = minDateFor(goal?.target_date)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!title.trim()) return
+    if (targetDate && targetDate < minTarget) return setError('La fecha meta no puede ser anterior a hoy.')
     setBusy(true)
     const row = { title: title.trim(), description: description.trim() || null, area, target_date: targetDate || null, status }
     const { error } = goal ? await supabase.from('goals').update(row).eq('id', goal.id) : await supabase.from('goals').insert(row)
@@ -31,9 +34,14 @@ export default function GoalForm({ goal, onDone }: Props) {
   }
 
   async function handleDelete() {
-    if (!goal || !confirm(`¿Borrar la meta "${goal.title}"? Sus proyectos se conservan, pero quedarán sin meta.`)) return
+    if (!goal) return
+    const { count } = await supabase.from('projects').select('id', { count: 'exact', head: true }).eq('goal_id', goal.id)
+    const extra = count ? `\n\nTambién se borrarán sus ${count} ${count === 1 ? 'proyecto' : 'proyectos'} con todos sus pasos.` : ''
+    if (!confirm(`¿Borrar la meta "${goal.title}"?${extra}`)) return
     setBusy(true)
-    const { error } = await supabase.from('goals').delete().eq('id', goal.id)
+    // Primero los proyectos (sus pasos se borran solos en la BD), luego la meta.
+    const res = await supabase.from('projects').delete().eq('goal_id', goal.id)
+    const { error } = res.error ? res : await supabase.from('goals').delete().eq('id', goal.id)
     setBusy(false)
     if (error) setError(error.message)
     else onDone(true)
@@ -72,7 +80,7 @@ export default function GoalForm({ goal, onDone }: Props) {
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
           <span className="mb-1 block text-sm font-medium">Fecha meta</span>
-          <input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} className={`${inputClass} py-2.5`} />
+          <input type="date" value={targetDate} min={minTarget} onChange={(e) => setTargetDate(e.target.value)} className={`${inputClass} py-2.5`} />
         </label>
         <label className="block">
           <span className="mb-1 block text-sm font-medium">Estado</span>

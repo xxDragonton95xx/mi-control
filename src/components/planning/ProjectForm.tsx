@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react'
 import ErrorBox from '../ErrorBox'
 import { supabase } from '../../lib/supabase'
 import { inputClass, primaryButton } from '../../lib/ui'
+import { minDateFor, todayISO } from '../../lib/format'
 import { PRIORITIES, PROJECT_STATUSES, type Goal, type Priority, type Project, type ProjectStatus } from '../../lib/planning'
 
 type Props = {
@@ -19,14 +20,24 @@ export default function ProjectForm({ project, goals, defaultGoalId, onDone }: P
   const [goalId, setGoalId] = useState(project?.goal_id ?? defaultGoalId ?? '')
   const [status, setStatus] = useState<ProjectStatus>(project?.status ?? 'activo')
   const [priority, setPriority] = useState<Priority>(project?.priority ?? 'media')
-  const [startDate, setStartDate] = useState(project?.start_date ?? '')
-  const [dueDate, setDueDate] = useState(project?.due_date ?? '')
+  const [startDate, setStartDate] = useState(project ? (project.start_date ?? '') : todayISO())
+  const [dueDate, setDueDate] = useState(project ? (project.due_date ?? '') : todayISO())
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const minStart = minDateFor(project?.start_date)
+  const minDue = startDate && startDate > minDateFor(project?.due_date) ? startDate : minDateFor(project?.due_date)
+
+  function changeStart(value: string) {
+    setStartDate(value)
+    // Si la fecha límite queda antes del nuevo inicio, la recorremos al inicio.
+    if (value && dueDate && dueDate < value) setDueDate(value)
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!title.trim()) return
+    if (startDate && startDate < minStart) return setError('La fecha de inicio no puede ser anterior a hoy.')
+    if (dueDate && dueDate < minDateFor(project?.due_date)) return setError('La fecha límite no puede ser anterior a hoy.')
     if (startDate && dueDate && dueDate < startDate) return setError('La fecha límite no puede ser antes del inicio.')
     setBusy(true)
     const row = {
@@ -101,11 +112,11 @@ export default function ProjectForm({ project, goals, defaultGoalId, onDone }: P
         </label>
         <label className="block">
           <span className="mb-1 block text-sm font-medium">Inicio</span>
-          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={`${inputClass} py-2.5`} />
+          <input type="date" value={startDate} min={minStart} onChange={(e) => changeStart(e.target.value)} className={`${inputClass} py-2.5`} />
         </label>
         <label className="block">
           <span className="mb-1 block text-sm font-medium">Fecha límite</span>
-          <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={`${inputClass} py-2.5`} />
+          <input type="date" value={dueDate} min={minDue} onChange={(e) => setDueDate(e.target.value)} className={`${inputClass} py-2.5`} />
         </label>
       </div>
 

@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react'
 import ErrorBox from '../ErrorBox'
 import { supabase } from '../../lib/supabase'
 import { inputClass, primaryButton } from '../../lib/ui'
+import { minDateFor, todayISO } from '../../lib/format'
 import { PRIORITIES, type Priority, type Project, type Task } from '../../lib/planning'
 
 type Props = {
@@ -16,15 +17,17 @@ type Props = {
 export default function TaskForm({ task, projects, defaults, onDone }: Props) {
   const [title, setTitle] = useState(task?.title ?? '')
   const [notes, setNotes] = useState(task?.notes ?? '')
-  const [dueDate, setDueDate] = useState(task?.due_date ?? defaults?.due_date ?? '')
+  const [dueDate, setDueDate] = useState(task ? (task.due_date ?? '') : (defaults?.due_date ?? todayISO()))
   const [priority, setPriority] = useState<Priority>(task?.priority ?? 'media')
   const [projectId, setProjectId] = useState(task?.project_id ?? defaults?.project_id ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const minDue = minDateFor(task?.due_date)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!title.trim()) return
+    if (dueDate && dueDate < minDue) return setError('La fecha límite no puede ser anterior a hoy.')
     setBusy(true)
     const row = {
       title: title.trim(),
@@ -55,7 +58,7 @@ export default function TaskForm({ task, projects, defaults, onDone }: Props) {
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
           <span className="mb-1 block text-sm font-medium">Fecha límite</span>
-          <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={`${inputClass} py-2.5`} />
+          <input type="date" value={dueDate} min={minDue} onChange={(e) => setDueDate(e.target.value)} className={`${inputClass} py-2.5`} />
         </label>
         <label className="block">
           <span className="mb-1 block text-sm font-medium">Prioridad</span>

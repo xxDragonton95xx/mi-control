@@ -13,6 +13,17 @@ export const fromISODate = (s: string) => {
   return new Date(y, m - 1, d)
 }
 
+export const todayISO = () => toISODate(new Date())
+
+/**
+ * Fecha mínima permitida en un campo: hoy, salvo que el registro ya tenga guardada
+ * una fecha anterior (para poder editarlo sin que el formulario lo rechace).
+ */
+export const minDateFor = (saved?: string | null) => {
+  const today = todayISO()
+  return saved && saved < today ? saved : today
+}
+
 export const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1)
 
 export const addMonths = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth() + n, 1)

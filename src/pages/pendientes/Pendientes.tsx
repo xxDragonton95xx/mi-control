@@ -203,7 +203,6 @@ export default function Pendientes() {
         <TaskForm
           task={editing}
           projects={openProjects}
-          defaults={{ due_date: view === 'hoy' ? today : null }}
           onDone={() => {
             setOpen(false)
             reload()
