@@ -1,4 +1,4 @@
-﻿import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { ChevronRight, LogOut, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -31,7 +31,7 @@ type SheetState =
 
 function greeting() {
   const h = new Date().getHours()
-  return h < 12 ? 'Buenos dÃ­as' : h < 19 ? 'Buenas tardes' : 'Buenas noches'
+  return h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches'
 }
 
 export default function Hoy() {
@@ -110,7 +110,7 @@ export default function Hoy() {
 
       <div className="grid grid-cols-3 gap-2 text-center">
         <Stat label="Pendientes" value={String(pendingOpen)} tone={pending.some((t) => !isDone(t) && t.due_date! < today) ? 'warn' : undefined} />
-        <Stat label="Rutinas" value={routinesToday.length ? `${routinesDone}/${routinesToday.length}` : 'â€”'} />
+        <Stat label="Rutinas" value={routinesToday.length ? `${routinesDone}/${routinesToday.length}` : '—'} />
         <Stat label="Gastado hoy" value={formatMXN(todayTotal).replace('.00', '')} />
       </div>
 
@@ -133,7 +133,7 @@ export default function Hoy() {
             emptyText="Nada agendado para hoy."
           />
         ) : (
-          <p className="py-4 text-center text-slate-400">Cargandoâ€¦</p>
+          <p className="py-4 text-center text-slate-400">Cargando…</p>
         )}
       </section>
 
@@ -144,10 +144,10 @@ export default function Hoy() {
           </button>
         </SectionHeader>
         {!o ? (
-          <p className="py-4 text-center text-slate-400">Cargandoâ€¦</p>
+          <p className="py-4 text-center text-slate-400">Cargando…</p>
         ) : pending.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-            Â¡Nada pendiente para hoy! ðŸŽ‰
+            ¡Nada pendiente para hoy! 🎉
           </p>
         ) : (
           <ul className={`${card} divide-y divide-slate-100 p-0 dark:divide-slate-800`}>
@@ -182,7 +182,7 @@ export default function Hoy() {
             <BudgetBar spent={monthTotal} budget={budget} />
           ) : (
             <Link to="/gastos" className="mt-1 block text-sm text-brand-600 dark:text-brand-500">
-              Define tu presupuesto del mes â†’
+              Define tu presupuesto del mes →
             </Link>
           )}
         </div>
