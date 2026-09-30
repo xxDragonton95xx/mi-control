@@ -1,5 +1,18 @@
-import { Check, Flag, FolderKanban } from 'lucide-react'
-import { dueLabel, isDone, type Task } from '../../lib/planning'
+import { Check, CheckCircle2, Flag, FolderKanban } from 'lucide-react'
+import { addDays, dueLabel, isDone, type Task } from '../../lib/planning'
+import { toISODate } from '../../lib/format'
+
+/** "hoy 14:32", "ayer 09:10", "el lun 28 sep 18:05" (con año si no es el actual). */
+function completedLabel(timestamp: string, today: string) {
+  const d = new Date(timestamp)
+  const day = toISODate(d)
+  const time = d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false })
+  if (day === today) return `hoy ${time}`
+  if (day === addDays(today, -1)) return `ayer ${time}`
+  const sameYear = d.getFullYear() === new Date().getFullYear()
+  const date = d.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }) })
+  return `el ${date} ${time}`
+}
 
 type Props = {
   task: Task
@@ -12,6 +25,7 @@ type Props = {
 export default function TaskItem({ task, today, projectTitle, onToggle, onOpen }: Props) {
   const done = isDone(task)
   const due = task.due_date && !done ? dueLabel(task.due_date, today) : null
+  const completed = done && task.completed_at ? completedLabel(task.completed_at, today) : null
 
   return (
     <div className="flex items-start gap-3 px-4 py-3">
@@ -26,8 +40,13 @@ export default function TaskItem({ task, today, projectTitle, onToggle, onOpen }
       </button>
       <button onClick={() => onOpen(task)} className="min-w-0 flex-1 text-left">
         <span className={`block ${done ? 'text-slate-400 line-through' : ''}`}>{task.title}</span>
-        {(due || projectTitle || task.priority === 'alta') && (
+        {(due || completed || projectTitle || task.priority === 'alta') && (
           <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+            {completed && (
+              <span className="flex items-center gap-1 font-medium text-brand-600 dark:text-brand-500">
+                <CheckCircle2 size={12} /> Hecha {completed}
+              </span>
+            )}
             {due && (
               <span
                 className={
