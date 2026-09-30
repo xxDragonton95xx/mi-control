@@ -1,13 +1,5 @@
 import ComingSoon from '../components/ComingSoon'
 
-export function Gastos() {
-  return (
-    <ComingSoon title="Gastos" phase={2}>
-      Captura rápida de gastos, resumen por categoría y presupuesto mensual.
-    </ComingSoon>
-  )
-}
-
 export function Pendientes() {
   return (
     <ComingSoon title="Pendientes" phase={3}>

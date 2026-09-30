@@ -3,7 +3,9 @@ import { AuthProvider, useAuth } from './auth/AuthProvider'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Hoy from './pages/Hoy'
-import { Gastos, Metas, Pendientes, Semana } from './pages/placeholders'
+import Gastos from './pages/gastos/Gastos'
+import Categorias from './pages/gastos/Categorias'
+import { Metas, Pendientes, Semana } from './pages/placeholders'
 
 function AppRoutes() {
   const { session, loading } = useAuth()
@@ -19,6 +21,7 @@ function AppRoutes() {
       <Route element={<Layout />}>
         <Route index element={<Hoy />} />
         <Route path="gastos" element={<Gastos />} />
+        <Route path="gastos/categorias" element={<Categorias />} />
         <Route path="pendientes" element={<Pendientes />} />
         <Route path="semana" element={<Semana />} />
         <Route path="metas" element={<Metas />} />
