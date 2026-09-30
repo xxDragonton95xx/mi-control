@@ -1,0 +1,39 @@
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import { AuthProvider, useAuth } from './auth/AuthProvider'
+import Layout from './components/Layout'
+import Login from './pages/Login'
+import Hoy from './pages/Hoy'
+import { Gastos, Metas, Pendientes, Semana } from './pages/placeholders'
+
+function AppRoutes() {
+  const { session, loading } = useAuth()
+
+  if (loading) {
+    return <div className="flex h-full items-center justify-center text-slate-400">Cargando…</div>
+  }
+
+  if (!session) return <Login />
+
+  return (
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<Hoy />} />
+        <Route path="gastos" element={<Gastos />} />
+        <Route path="pendientes" element={<Pendientes />} />
+        <Route path="semana" element={<Semana />} />
+        <Route path="metas" element={<Metas />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
+  )
+}
