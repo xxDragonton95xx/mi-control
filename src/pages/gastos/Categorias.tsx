@@ -1,8 +1,10 @@
 import { useCallback, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
-import { ChevronLeft, Plus, Trash2 } from 'lucide-react'
+import { ChevronLeft, Pencil, Plus, Trash2, X } from 'lucide-react'
 import Sheet from '../../components/Sheet'
+import BudgetForm from './BudgetForm'
 import { useCategories } from '../../hooks/useCategories'
+import { useGeneralBudget } from '../../hooks/useGeneralBudget'
 import { supabase } from '../../lib/supabase'
 import { CATEGORY_COLORS, CATEGORY_ICONS, CategoryBadge } from '../../lib/categoryIcons'
 import { formatMXN, parseAmount } from '../../lib/format'
@@ -13,9 +15,12 @@ export default function Categorias() {
   const { categories, loading, error, reload } = useCategories()
   const [editing, setEditing] = useState<Category | null>(null)
   const [open, setOpen] = useState(false)
+  const [budgetOpen, setBudgetOpen] = useState(false)
   const close = useCallback(() => setOpen(false), [])
+  const closeBudget = useCallback(() => setBudgetOpen(false), [])
+  const { budget: generalBudget } = useGeneralBudget()
 
-  const totalBudget = categories.reduce((s, c) => s + (c.monthly_budget ?? 0), 0)
+  const categoryBudgetsTotal = categories.reduce((s, c) => s + (c.monthly_budget ?? 0), 0)
   const nextOrder = Math.max(0, ...categories.map((c) => c.sort_order)) + 1
 
   return (
@@ -27,12 +32,24 @@ export default function Categorias() {
         <h1 className="text-2xl font-bold">Categorías</h1>
       </header>
 
+      <button onClick={() => setBudgetOpen(true)} className={`${card} flex w-full items-center justify-between text-left active:bg-slate-50 dark:active:bg-slate-800/50`}>
+        <span>
+          <span className="block text-sm text-slate-500 dark:text-slate-400">Presupuesto general del mes</span>
+          <span className="block text-xl font-bold tabular-nums">{generalBudget ? formatMXN(generalBudget) : 'Sin definir'}</span>
+        </span>
+        <Pencil size={18} className="text-slate-400" />
+      </button>
+
       <p className="text-sm text-slate-500 dark:text-slate-400">
-        Toca una categoría para cambiar su nombre, color o presupuesto mensual.
-        {totalBudget > 0 && (
+        Toca una categoría para cambiar su nombre, color o ícono. Su presupuesto es <strong>opcional</strong>: si no le pones, no se toma
+        en cuenta.
+        {categoryBudgetsTotal > 0 && (
           <>
             {' '}
-            Presupuesto total: <strong className="text-slate-700 dark:text-slate-200">{formatMXN(totalBudget)}</strong>
+            Presupuestos por categoría: <strong className="text-slate-700 dark:text-slate-200">{formatMXN(categoryBudgetsTotal)}</strong>
+            {generalBudget && categoryBudgetsTotal > generalBudget && (
+              <span className="text-amber-600 dark:text-amber-400"> (más que tu presupuesto general)</span>
+            )}
           </>
         )}
       </p>
@@ -55,7 +72,7 @@ export default function Categorias() {
                 <CategoryBadge icon={c.icon} color={c.color} />
                 <span className="flex-1 font-medium">{c.name}</span>
                 <span className="text-sm tabular-nums text-slate-500 dark:text-slate-400">
-                  {c.monthly_budget ? formatMXN(c.monthly_budget) : 'Sin presupuesto'}
+                  {c.monthly_budget ? formatMXN(c.monthly_budget) : '—'}
                 </span>
               </button>
             </li>
@@ -82,6 +99,10 @@ export default function Categorias() {
             reload()
           }}
         />
+      </Sheet>
+
+      <Sheet open={budgetOpen} onClose={closeBudget} title="Presupuesto del mes">
+        <BudgetForm categoryBudgetsTotal={categoryBudgetsTotal} onDone={closeBudget} />
       </Sheet>
     </div>
   )
@@ -130,12 +151,29 @@ function CategoryForm({ category, nextOrder, onDone }: { category: Category | nu
 
       <label className="block">
         <span className="mb-1 block text-sm font-medium">
-          Presupuesto mensual <span className="font-normal text-slate-400">(opcional)</span>
+          Presupuesto de esta categoría <span className="font-normal text-slate-400">(opcional)</span>
         </span>
         <div className="relative">
           <span className="absolute top-1/2 left-4 -translate-y-1/2 text-slate-400">$</span>
-          <input inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="0.00" className={`${inputClass} pl-8`} />
+          <input
+            inputMode="decimal"
+            value={budget}
+            onChange={(e) => setBudget(e.target.value)}
+            placeholder="Sin presupuesto"
+            className={`${inputClass} pr-11 pl-8`}
+          />
+          {budget && (
+            <button
+              type="button"
+              onClick={() => setBudget('')}
+              aria-label="Quitar presupuesto"
+              className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full p-1.5 text-slate-400 active:bg-slate-100 dark:active:bg-slate-800"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
+        <span className="mt-1 block text-xs text-slate-400">Déjalo vacío si no quieres controlar esta categoría por separado.</span>
       </label>
 
       <fieldset>

@@ -1,10 +1,12 @@
 import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import { ChevronLeft, ChevronRight, Plus, Settings2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Pencil, Plus, Settings2 } from 'lucide-react'
 import Sheet from '../../components/Sheet'
 import ExpenseForm from './ExpenseForm'
+import BudgetForm from './BudgetForm'
 import { useCategories } from '../../hooks/useCategories'
 import { useExpenses } from '../../hooks/useExpenses'
+import { useGeneralBudget } from '../../hooks/useGeneralBudget'
 import { CategoryBadge } from '../../lib/categoryIcons'
 import { addMonths, dayLabel, formatMXN, monthLabel, startOfMonth, toISODate } from '../../lib/format'
 import { card } from '../../lib/ui'
@@ -17,9 +19,11 @@ export default function Gastos() {
   const [view, setView] = useState<'lista' | 'categorias'>('lista')
   const [editing, setEditing] = useState<Expense | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [budgetOpen, setBudgetOpen] = useState(false)
 
-  const { categories, loading: loadingCats } = useCategories()
+  const { categories } = useCategories()
   const { expenses, loading, error, reload } = useExpenses(month)
+  const { budget: generalBudget } = useGeneralBudget()
 
   const today = toISODate(new Date())
   const isCurrentMonth = toISODate(month) === toISODate(startOfMonth(new Date()))
@@ -28,7 +32,7 @@ export default function Gastos() {
   const catOf = (e: Expense) => (e.category_id && categoryById.get(e.category_id)) || UNCATEGORIZED
 
   const total = expenses.reduce((s, e) => s + e.amount, 0)
-  const totalBudget = categories.reduce((s, c) => s + (c.monthly_budget ?? 0), 0)
+  const categoryBudgetsTotal = categories.reduce((s, c) => s + (c.monthly_budget ?? 0), 0)
 
   const byDay = useMemo(() => {
     const groups = new Map<string, Expense[]>()
@@ -53,6 +57,7 @@ export default function Gastos() {
     setSheetOpen(true)
   }
   const closeSheet = useCallback(() => setSheetOpen(false), [])
+  const closeBudget = useCallback(() => setBudgetOpen(false), [])
   const onSaved = () => {
     setSheetOpen(false)
     reload()
@@ -86,13 +91,26 @@ export default function Gastos() {
       </div>
 
       <section className={card}>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Total del mes</p>
-        <p className="text-3xl font-bold tabular-nums">{formatMXN(total)}</p>
-        {totalBudget > 0 && <BudgetBar spent={total} budget={totalBudget} />}
-        {totalBudget === 0 && !loadingCats && (
-          <Link to="/gastos/categorias" className="mt-2 block text-sm text-brand-600 dark:text-brand-500">
-            Define presupuestos por categoría →
-          </Link>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Total del mes</p>
+            <p className="text-3xl font-bold tabular-nums">{formatMXN(total)}</p>
+          </div>
+          {generalBudget && (
+            <button
+              onClick={() => setBudgetOpen(true)}
+              className="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-slate-500 active:bg-slate-100 dark:text-slate-400 dark:active:bg-slate-800"
+            >
+              <Pencil size={14} /> Presupuesto
+            </button>
+          )}
+        </div>
+        {generalBudget ? (
+          <BudgetBar spent={total} budget={generalBudget} />
+        ) : (
+          <button onClick={() => setBudgetOpen(true)} className="mt-2 text-sm font-medium text-brand-600 dark:text-brand-500">
+            + Definir presupuesto del mes
+          </button>
         )}
       </section>
 
@@ -182,6 +200,10 @@ export default function Gastos() {
 
       <Sheet open={sheetOpen} onClose={closeSheet} title={editing ? 'Editar gasto' : 'Nuevo gasto'}>
         <ExpenseForm categories={categories} expense={editing} onDone={onSaved} />
+      </Sheet>
+
+      <Sheet open={budgetOpen} onClose={closeBudget} title="Presupuesto del mes">
+        <BudgetForm categoryBudgetsTotal={categoryBudgetsTotal} onDone={closeBudget} />
       </Sheet>
     </div>
   )
