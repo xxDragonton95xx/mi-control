@@ -7,6 +7,8 @@ import BudgetForm from './BudgetForm'
 import { useCategories } from '../../hooks/useCategories'
 import { useExpenses } from '../../hooks/useExpenses'
 import { useGeneralBudget } from '../../hooks/useGeneralBudget'
+import { must, useLoad } from '../../hooks/useLoad'
+import { supabase } from '../../lib/supabase'
 import { CategoryBadge } from '../../lib/categoryIcons'
 import { addMonths, dayLabel, formatMXN, monthLabel, startOfMonth, toISODate } from '../../lib/format'
 import { card } from '../../lib/ui'
@@ -24,6 +26,15 @@ export default function Gastos() {
   const { categories } = useCategories()
   const { expenses, loading, error, reload } = useExpenses(month)
   const { budget: generalBudget } = useGeneralBudget()
+  const { data: projects } = useLoad(
+    () =>
+      supabase
+        .from('projects')
+        .select('id, title, status')
+        .order('title')
+        .then(must<{ id: string; title: string; status: string }[]>),
+    [],
+  )
 
   const today = toISODate(new Date())
   const isCurrentMonth = toISODate(month) === toISODate(startOfMonth(new Date()))
@@ -199,7 +210,12 @@ export default function Gastos() {
       </button>
 
       <Sheet open={sheetOpen} onClose={closeSheet} title={editing ? 'Editar gasto' : 'Nuevo gasto'}>
-        <ExpenseForm categories={categories} expense={editing} onDone={onSaved} />
+        <ExpenseForm
+          categories={categories}
+          projects={(projects ?? []).filter((p) => p.status !== 'terminado' || p.id === editing?.project_id)}
+          expense={editing}
+          onDone={onSaved}
+        />
       </Sheet>
 
       <Sheet open={budgetOpen} onClose={closeBudget} title="Presupuesto del mes">

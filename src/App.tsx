@@ -5,7 +5,11 @@ import Login from './pages/Login'
 import Hoy from './pages/Hoy'
 import Gastos from './pages/gastos/Gastos'
 import Categorias from './pages/gastos/Categorias'
-import { Metas, Pendientes, Semana } from './pages/placeholders'
+import Pendientes from './pages/pendientes/Pendientes'
+import Metas from './pages/metas/Metas'
+import MetaDetalle from './pages/metas/MetaDetalle'
+import ProyectoDetalle from './pages/metas/ProyectoDetalle'
+import { Semana } from './pages/placeholders'
 
 function AppRoutes() {
   const { session, loading } = useAuth()
@@ -25,6 +29,8 @@ function AppRoutes() {
         <Route path="pendientes" element={<Pendientes />} />
         <Route path="semana" element={<Semana />} />
         <Route path="metas" element={<Metas />} />
+        <Route path="metas/:id" element={<MetaDetalle />} />
+        <Route path="metas/proyectos/:id" element={<ProyectoDetalle />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

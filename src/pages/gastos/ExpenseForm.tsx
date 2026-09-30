@@ -8,11 +8,13 @@ import { PAYMENT_METHODS, type Category, type Expense, type PaymentMethod } from
 
 type Props = {
   categories: Category[]
+  projects: { id: string; title: string }[]
   expense: Expense | null
   onDone: () => void
 }
 
-export default function ExpenseForm({ categories, expense, onDone }: Props) {
+export default function ExpenseForm({ categories, projects, expense, onDone }: Props) {
+  const [projectId, setProjectId] = useState(expense?.project_id ?? '')
   const [amount, setAmount] = useState(expense ? String(expense.amount) : '')
   const [categoryId, setCategoryId] = useState<string | null>(expense?.category_id ?? null)
   const [spentOn, setSpentOn] = useState(expense?.spent_on ?? toISODate(new Date()))
@@ -34,6 +36,7 @@ export default function ExpenseForm({ categories, expense, onDone }: Props) {
       spent_on: spentOn,
       description: description.trim() || null,
       payment_method: method,
+      project_id: projectId || null,
     }
     const { error } = expense
       ? await supabase.from('expenses').update(row).eq('id', expense.id)
@@ -123,6 +126,22 @@ export default function ExpenseForm({ categories, expense, onDone }: Props) {
           className={inputClass}
         />
       </label>
+
+      {projects.length > 0 && (
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium">
+            Proyecto <span className="font-normal text-slate-400">(opcional)</span>
+          </span>
+          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputClass} py-2.5`}>
+            <option value="">Ninguno</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}
 
