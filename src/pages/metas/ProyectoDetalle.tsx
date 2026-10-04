@@ -1,6 +1,6 @@
 import { useCallback, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ChevronLeft, Pencil, Plus, Wallet } from 'lucide-react'
+import { ChevronLeft, NotebookPen, Pencil, Plus, Users, Wallet } from 'lucide-react'
 import Sheet from '../../components/Sheet'
 import ErrorBox from '../../components/ErrorBox'
 import ProjectForm from '../../components/planning/ProjectForm'
@@ -11,7 +11,8 @@ import { must, useLoad } from '../../hooks/useLoad'
 import { supabase } from '../../lib/supabase'
 import { formatMXN, toISODate } from '../../lib/format'
 import { toggleTaskDone } from '../../lib/tasks'
-import { PRIORITIES, areaInfo, isDone, progressOf, projectStatusInfo, shortDate, type Goal, type Project, type Task } from '../../lib/planning'
+import { PRIORITIES, areaInfo, isDone, progressOf, projectStatusInfo, shortDate, type Goal, type Project, type ProjectLog, type Task } from '../../lib/planning'
+import { FRESH_TEXT, daysSince, freshness } from '../../lib/radar'
 import { card } from '../../lib/ui'
 
 type ProjectData = {
@@ -19,6 +20,7 @@ type ProjectData = {
   goal: Goal | null
   goals: Pick<Goal, 'id' | 'title'>[]
   tasks: Task[]
+  logs: ProjectLog[]
   spent: number
 }
 
@@ -28,20 +30,22 @@ export default function ProyectoDetalle() {
   const [sheet, setSheet] = useState<'project' | 'task' | null>(null)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [newStep, setNewStep] = useState('')
+  const [note, setNote] = useState('')
   const [actionError, setActionError] = useState<string | null>(null)
   const close = useCallback(() => setSheet(null), [])
 
   const { data, setData, error, reload, loading } = useLoad(async (): Promise<ProjectData> => {
     const project = await supabase.from('projects').select('*').eq('id', id!).maybeSingle().then(must<Project | null>)
-    if (!project) return { project: null, goal: null, goals: [], tasks: [], spent: 0 }
-    const [goal, goals, tasks, expenses] = await Promise.all([
+    if (!project) return { project: null, goal: null, goals: [], tasks: [], logs: [], spent: 0 }
+    const [goal, goals, tasks, expenses, logs] = await Promise.all([
       project.goal_id ? supabase.from('goals').select('*').eq('id', project.goal_id).maybeSingle().then(must<Goal | null>) : Promise.resolve(null),
       supabase.from('goals').select('id, title').eq('status', 'activa').order('title').then(must<Pick<Goal, 'id' | 'title'>[]>),
       supabase.from('tasks').select('*').eq('project_id', project.id).order('sort_order').order('created_at').then(must<Task[]>),
       supabase.from('expenses').select('amount').eq('project_id', project.id).then(must<{ amount: number }[]>),
+      supabase.from('project_logs').select('*').eq('project_id', project.id).order('created_at', { ascending: false }).limit(30).then(must<ProjectLog[]>),
     ])
     const spent = expenses.reduce((s, e) => s + Number(e.amount), 0)
-    return { project, goal, goals, tasks, spent }
+    return { project, goal, goals, tasks, logs, spent }
   }, [id])
 
   const today = toISODate(new Date())
@@ -57,7 +61,8 @@ export default function ProyectoDetalle() {
       </div>
     )
 
-  const { project, goal, tasks, spent } = data
+  const { project, goal, tasks, logs, spent } = data
+  const fresh = freshness(daysSince(project.last_activity_at))
   const pending = tasks.filter((t) => !isDone(t))
   const done = tasks.filter(isDone)
   const { done: doneCount, total } = progressOf(tasks)
@@ -87,6 +92,19 @@ export default function ProyectoDetalle() {
     setData((d) => d && { ...d, tasks: [...d.tasks, row as Task] })
   }
 
+  /** Anota en la bitácora (si escribiste algo) o solo marca que hoy moviste el proyecto. */
+  async function handleLog(e: FormEvent) {
+    e.preventDefault()
+    const text = note.trim()
+    const res = text
+      ? await supabase.from('project_logs').insert({ project_id: project.id, note: text })
+      : await supabase.from('projects').update({ last_activity_at: new Date().toISOString() }).eq('id', project.id)
+    if (res.error) return setActionError(res.error.message)
+    setNote('')
+    setActionError(null)
+    reload()
+  }
+
   const openTask = (t: Task) => {
     setEditingTask(t)
     setSheet('task')
@@ -113,9 +131,15 @@ export default function ProyectoDetalle() {
         <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
           <span className={`rounded-full px-2 py-0.5 ${status.className}`}>{status.label}</span>
           <span className="text-slate-500 dark:text-slate-400">Prioridad {PRIORITIES.find((p) => p.value === project.priority)!.label.toLowerCase()}</span>
+          {(project.status === 'activo' || project.status === 'pausado') && <span className={FRESH_TEXT[fresh.tone]}>· {fresh.text}</span>}
         </div>
         <h1 className="text-2xl font-bold">{project.title}</h1>
         {project.description && <p className="whitespace-pre-line text-slate-600 dark:text-slate-300">{project.description}</p>}
+        {project.with_whom && (
+          <p className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
+            <Users size={14} /> Con {project.with_whom}
+          </p>
+        )}
         {(project.start_date || project.due_date) && (
           <p className="text-sm text-slate-500 dark:text-slate-400">
             {project.start_date && `Inicio: ${shortDate(project.start_date)}`}
@@ -162,6 +186,40 @@ export default function ProyectoDetalle() {
       </section>
 
       <ErrorBox message={actionError} />
+
+      <section>
+        <h2 className="mb-2 flex items-center gap-1.5 px-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
+          <NotebookPen size={15} /> Bitácora
+        </h2>
+        <div className={`${card} space-y-3`}>
+          <form onSubmit={handleLog} className="flex items-center gap-2">
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="¿Qué hiciste, decidiste o te frenó?"
+              maxLength={300}
+              className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-600 dark:border-slate-700 dark:bg-slate-900"
+            />
+            <button type="submit" className="shrink-0 rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white active:bg-brand-700">
+              {note.trim() ? 'Anotar' : 'Lo moví hoy'}
+            </button>
+          </form>
+          {logs.length === 0 ? (
+            <p className="text-xs text-slate-400">Aquí quedan tus notas, los pasos que completas y los cambios de estado.</p>
+          ) : (
+            <ul className="space-y-1.5 text-sm">
+              {logs.map((l) => (
+                <li key={l.id} className="flex gap-2">
+                  <span className="w-14 shrink-0 text-xs tabular-nums text-slate-400">
+                    {new Date(l.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                  </span>
+                  <span className={`min-w-0 ${l.auto ? 'text-slate-500 dark:text-slate-400' : ''}`}>{l.note}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
 
       {done.length > 0 && (
         <details className="group">

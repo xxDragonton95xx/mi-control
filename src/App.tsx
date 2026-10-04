@@ -11,6 +11,7 @@ import Rutinas from './pages/semana/Rutinas'
 import Metas from './pages/metas/Metas'
 import MetaDetalle from './pages/metas/MetaDetalle'
 import ProyectoDetalle from './pages/metas/ProyectoDetalle'
+import Radar from './pages/metas/Radar'
 
 function AppRoutes() {
   const { session, loading } = useAuth()
@@ -31,6 +32,7 @@ function AppRoutes() {
         <Route path="semana" element={<Semana />} />
         <Route path="semana/rutinas" element={<Rutinas />} />
         <Route path="metas" element={<Metas />} />
+        <Route path="metas/radar" element={<Radar />} />
         <Route path="metas/:id" element={<MetaDetalle />} />
         <Route path="metas/proyectos/:id" element={<ProyectoDetalle />} />
         <Route path="*" element={<Navigate to="/" replace />} />

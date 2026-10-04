@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { ChevronRight, Plus } from 'lucide-react'
+import { ChevronRight, Plus, Radar as RadarIcon } from 'lucide-react'
 import Sheet from '../../components/Sheet'
 import ErrorBox from '../../components/ErrorBox'
 import GoalForm from '../../components/planning/GoalForm'
@@ -11,6 +11,7 @@ import { must, useLoad } from '../../hooks/useLoad'
 import { supabase } from '../../lib/supabase'
 import { areaInfo, isDone, shortDate, type Goal, type Project, type Task } from '../../lib/planning'
 import { card } from '../../lib/ui'
+import { STALE_DAYS, WIP_LIMIT, daysSince } from '../../lib/radar'
 
 type TaskLite = Pick<Task, 'id' | 'project_id' | 'status'>
 
@@ -58,6 +59,8 @@ export default function Metas() {
       </header>
 
       <ErrorBox message={error} />
+
+      {data && data.projects.length > 0 && <RadarLink projects={data.projects} />}
 
       {loading ? (
         <p className="py-8 text-center text-slate-400">Cargando…</p>
@@ -154,6 +157,29 @@ function GoalCard({ goal, stats }: { goal: Goal; stats: { projects: number; done
           {goal.target_date && ` · para el ${shortDate(goal.target_date)}`}
         </p>
         <ProgressBar done={stats.done} total={stats.total} color={area.color} />
+      </div>
+      <ChevronRight size={18} className="shrink-0 text-slate-400" />
+    </Link>
+  )
+}
+
+function RadarLink({ projects }: { projects: Project[] }) {
+  const active = projects.filter((p) => p.status === 'activo')
+  const stale = active.filter((p) => daysSince(p.last_activity_at) > STALE_DAYS).length
+  return (
+    <Link to="/metas/radar" className={`${card} flex items-center gap-3 active:bg-slate-50 dark:active:bg-slate-800/50`}>
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-700/20 dark:text-brand-100">
+        <RadarIcon size={22} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold">Radar de proyectos</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          <span className={active.length > WIP_LIMIT ? 'font-semibold text-red-600 dark:text-red-400' : ''}>
+            {active.length}/{WIP_LIMIT} activos
+          </span>
+          {stale > 0 && <span className="font-semibold text-red-600 dark:text-red-400"> · {stale} {stale === 1 ? 'estancado' : 'estancados'}</span>}
+          {' · foco y resumen de la semana'}
+        </p>
       </div>
       <ChevronRight size={18} className="shrink-0 text-slate-400" />
     </Link>

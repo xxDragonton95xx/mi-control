@@ -26,6 +26,16 @@ export type Project = {
   priority: Priority
   start_date: string | null
   due_date: string | null
+  with_whom: string | null
+  last_activity_at: string
+  created_at: string
+}
+
+export type ProjectLog = {
+  id: string
+  project_id: string
+  note: string
+  auto: boolean
   created_at: string
 }
 

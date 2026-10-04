@@ -17,6 +17,7 @@ type Props = {
 export default function ProjectForm({ project, goals, defaultGoalId, onDone }: Props) {
   const [title, setTitle] = useState(project?.title ?? '')
   const [description, setDescription] = useState(project?.description ?? '')
+  const [withWhom, setWithWhom] = useState(project?.with_whom ?? '')
   const [goalId, setGoalId] = useState(project?.goal_id ?? defaultGoalId ?? '')
   const [status, setStatus] = useState<ProjectStatus>(project?.status ?? 'activo')
   const [priority, setPriority] = useState<Priority>(project?.priority ?? 'media')
@@ -43,6 +44,7 @@ export default function ProjectForm({ project, goals, defaultGoalId, onDone }: P
     const row = {
       title: title.trim(),
       description: description.trim() || null,
+      with_whom: withWhom.trim() || null,
       goal_id: goalId || null,
       status,
       priority,
@@ -87,6 +89,13 @@ export default function ProjectForm({ project, goals, defaultGoalId, onDone }: P
           Descripción <span className="font-normal text-slate-400">(opcional)</span>
         </span>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={inputClass} />
+      </label>
+
+      <label className="block">
+        <span className="mb-1 block text-sm font-medium">
+          Con quién <span className="font-normal text-slate-400">(opcional)</span>
+        </span>
+        <input value={withWhom} onChange={(e) => setWithWhom(e.target.value)} placeholder="Ej: Ana y Carlos" maxLength={120} className={inputClass} />
       </label>
 
       <div className="grid grid-cols-2 gap-3">
